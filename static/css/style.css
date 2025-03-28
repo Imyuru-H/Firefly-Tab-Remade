@@ -1,0 +1,34 @@
+/* 设置页面基本样式 */
+body, html {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow: visible; /* 允许页面内容溢出 */
+    font-family: Arial, sans-serif;
+    user-select: none;
+    text-align: center; /* 居中 */
+}
+
+body {
+    margin: 0;
+    overflow: hidden;
+}
+
+/* 背景样式 */
+.background {
+    position: absolute;
+    width: 100%;
+    height: 100%; /* 将视频放在最底层 */
+    overflow: visible; /* 允许视频溢出 */
+    background-attachment: fixed; /* 背景固定 */
+}
+
+#bg {
+    width: 110%;
+    height: 110%;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    object-fit: cover !important; /* 确保视频覆盖整个背景 */
+}

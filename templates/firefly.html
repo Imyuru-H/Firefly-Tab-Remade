@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <title>Search</title>
+    <ling rel="icon" href="{{ url_for('static', filename='images/favicon.ico') }}?v={{ timestamp }}" type="image/x-icon"></ling>
+</head>
+<body id="page">
+    <!-- background -->
+    <div class="background" id="background">
+        <video autoplay muted loop preload="auto" id="bg">
+            <source src="{{ background }}" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
+        <img src="{{ background }}" id="bg" >
+    </div>
+    <!-- background particles -->
+    <div id="particles"></div>
+    <!-- content -->
+    <div id="content">
+        <div id="border">
+            <img src="{{ url_for('static', filename='svg/border-LeftTop.svg') }}" id="border_left" alt=""/>
+            <img src="{{ url_for('static', filename='svg/border-LeftTop.svg') }}" id="border_right" alt=""/>
+        </div>
+        <h1></h1>
+    </div>
+    <script src="{{ url_for('static', filename='js/parallax.js') }}"></script>
+</body>
+</html>
