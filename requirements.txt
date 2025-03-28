@@ -1,0 +1,25 @@
+# log.py
+colorama
+psutil
+GPUtil
+prettytable
+py-cpuinfo
+
+# app.py
+requests
+pandas
+flask
+werkzeug
+pyyaml
+
+# crawler.py
+beautifulsoup4
+requests
+pandas
+urllib3
+tqdm
+tenacity
+
+# other libraries
+numpy
+setuptools

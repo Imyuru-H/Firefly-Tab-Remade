@@ -21,7 +21,7 @@ logs = log.Info()
 app = Flask(__name__)
 app.static_folder = "static"
 
-BG_PATH = 'background.jpg'
+BG_PATH = 'background-1.mp4'
 
 @app.route('/')
 def index():
