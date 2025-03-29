@@ -40,10 +40,6 @@ CONFIG = {
     'font_size' : 10
 }
 
-DARK_THEME = {
-    'background' : '#191919',
-}
-
 
 class LogConsumer(QThread):
     log_received = pyqtSignal(str, str)  # (log_type, message)
@@ -92,21 +88,7 @@ class LoggerApp(QMainWindow):
         self.setWindowTitle(CONFIG['app_name'])
         self.setGeometry(100, 100, *CONFIG['window_size'])
         self.setStyleSheet("""
-            QMainWindow {
-                background-color: #1A1A1A;
-            }
-            QTextEdit {
-                background-color: #2D2D2D;
-                color: #D4D4D4;
-                border: none;
-            }
-            QLabel {
-                color: #D4D4D4;
-            }
-            QHeaderView::section {
-                background-color: #3C3C3C;
-                color: #D4D4D4;
-            }
+            
         """)
 
         # Central widget
@@ -174,7 +156,7 @@ class LoggerApp(QMainWindow):
             'false' : '#C00000',
             'debug' : '#C000C0',
             'timestamp' : '#858585',
-            'content' : '#D4D4D4'
+            'content' : '#000000'
         }
         timestamp = datetime.now().strftime("[%H:%M:%S]")
         log_label = f"[{log_type.upper()}]&nbsp;" if log_type == "info" else f"[{log_type.upper()}]"
