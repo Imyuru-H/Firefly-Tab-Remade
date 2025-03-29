@@ -4,6 +4,7 @@ psutil
 GPUtil
 prettytable
 py-cpuinfo
+PyQt5
 
 # app.py
 requests

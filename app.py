@@ -5,7 +5,7 @@
 __version__ = "re-0.0.1"
 
 
-import os, time, random
+import os, sys, time, random
 os.environ["PYTHONIOENCODING"] = "utf-8"
 
 start_time = time.time()
@@ -14,14 +14,20 @@ from flask import *
 import logging
 import queue
 import threading
+from PyQt5.QtWidgets import QApplication
 
-import log, tips
+import tips
+
+UI_LOGGING = True
+
+if UI_LOGGING:
+    import UiLog as log
+else:
+    import NonUiLog as log
 
 # init log
+app_qt = QApplication([])
 logs = log.LoggerApp()
-# 在单独的线程中启动 Tkinter 主循环
-tk_thread = threading.Thread(target=logs.start, daemon=True)
-tk_thread.start()
 
 # init flask app
 app = Flask(__name__)
@@ -70,9 +76,17 @@ def index():
     return render_template('firefly.html', **kwargs), logs.info("return firefly.html.")
 
 
+def run_flask_app():
+    app.run(debug=False, use_reloader=False, port=8080)
+
 if __name__ == "__main__":
     end_time = time.time()
     logs.info(f"App start duration: {end_time-start_time:.2f}s")
     
-    # 启动web app
-    app.run(debug=False, use_reloader=False, port=8080)
+    # 启动 Flask 应用的后台线程
+    flask_thread = threading.Thread(target=run_flask_app, daemon=True)
+    flask_thread.start()
+    
+    # 显示日志窗口并启动 Qt 事件循环
+    logs.show()
+    sys.exit(app_qt.exec_())
