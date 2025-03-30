@@ -18,9 +18,16 @@ from PyQt5.QtWidgets import QApplication
 
 import tips
 
-UI_LOGGING = True
+# 配置应用设置
+CONFIGS = {
+    'ui_logging' : True,
+    'flask_debug' : False,
+    'flask_port' : 8080,
+    'app_name' : 'Firefly',
+    'bg_path' : 'background-1.mp4',
+}
 
-if UI_LOGGING:
+if CONFIGS['ui_logging']:
     import UiLog as log
 else:
     import NonUiLog as log
@@ -30,10 +37,8 @@ app_qt = QApplication([])
 logs = log.LoggerApp()
 
 # init flask app
-app = Flask(__name__)
+app = Flask(CONFIGS['app_name'])
 app.static_folder = "static"
-
-BG_PATH = 'background-1.mp4'
 
 # 配置 Flask 日志处理器
 app.logger.handlers = []
@@ -70,22 +75,24 @@ def capture_response_data(response):
 def index():
     kwargs = {
         "tip" : random.choice(tips.tips),
-        "background" : f"/static/background/{BG_PATH}"
+        "background" : f"/static/background/{CONFIGS['bg_path']}"
     }
 
     return render_template('firefly.html', **kwargs), logs.info("return firefly.html.")
 
 
-def run_flask_app():
-    app.run(debug=False, use_reloader=False, port=8080)
-
 if __name__ == "__main__":
     end_time = time.time()
     logs.info(f"App start duration: {end_time-start_time:.2f}s")
     
+    def run_flask_app():
+        app.run(debug=CONFIGS['flask_debug'], use_reloader=False, port=CONFIGS['flask_port'])
+    
     # 启动 Flask 应用的后台线程
     flask_thread = threading.Thread(target=run_flask_app, daemon=True)
     flask_thread.start()
+    logs.info(f" * Serving Flask app '{CONFIGS['app_name']}' on port {CONFIGS['flask_port']}",
+              f" * Debug mode: {'on' if CONFIGS['flask_debug'] else 'off'}",)
     
     # 显示日志窗口并启动 Qt 事件循环
     logs.show()

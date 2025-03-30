@@ -17,16 +17,18 @@ Update Features:
 
 
 import os, sys
-import threading
 os.environ["PYTHONIOENCODING"] = "utf-8"
 
-import PyQt5
+
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget,
                              QVBoxLayout, QHBoxLayout, QLabel, 
-                             QTextEdit, QTableWidget, QTableWidgetItem, 
-                             QHeaderView)
-from PyQt5.QtGui import QColor, QTextCursor
-from PyQt5.QtCore import Qt, QThread, pyqtSignal, pyqtSlot, QMutex
+                             QScrollArea, QScrollBar, QScroller,
+                             QTextEdit, QLineEdit, QSizePolicy)
+from PyQt5.QtGui import QTextCursor
+from PyQt5.QtCore import (QThread, pyqtSignal, pyqtSlot,
+                          QMutex, Qt, QEasingCurve,
+                          QEvent, QPropertyAnimation, )
+from PyQt5.QtCore import pyqtProperty
 
 import platform, psutil, cpuinfo, GPUtil
 from prettytable import PrettyTable
@@ -54,7 +56,8 @@ class LogConsumer(QThread):
             'info': 0,
             'error': 0,
             'false': 0,
-            'debug': 0
+            'debug': 0,
+            'input': 0            
         }
     
     def push_log(self, log_type, message):
@@ -77,9 +80,45 @@ class LogConsumer(QThread):
         self.running = False
         self.wait()
 
+class AnimatedScrollBar(QScrollBar):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._width = 6
+        self.animation = QPropertyAnimation(self, b"width")
+        self.animation.setEasingCurve(QEasingCurve.InOutQuad)
+        self.animation.setDuration(100)
+        self.width = 6
+        
+        self.setStyleSheet("""
+            QScrollBar:vertical {}
+        """)
+
+    def enterEvent(self, event):
+        self.animation.stop()
+        self.animation.setStartValue(self.width)
+        self.animation.setEndValue(12)
+        self.animation.start()
+        return super().enterEvent(event)
+
+    def leaveEvent(self, event):
+        self.animation.stop()
+        self.animation.setStartValue(self.width)
+        self.animation.setEndValue(6)
+        self.animation.start()
+        return super().leaveEvent(event)
+
+    def get_width(self):
+        return self._width
+
+    def set_width(self, width):
+        self._width = width
+        self.setStyleSheet(f"QScrollBar:vertical {{ width: {width}px; }}")
+
+    width = pyqtProperty(int, get_width, set_width)
+
 class LoggerApp(QMainWindow):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent=None):
+        super().__init__(parent)
         self._init_ui()
         self._init_worker()
         self.info("System Info:", *self.get_sys_info())
@@ -87,31 +126,58 @@ class LoggerApp(QMainWindow):
     def _init_ui(self):
         self.setWindowTitle(CONFIG['app_name'])
         self.setGeometry(100, 100, *CONFIG['window_size'])
-        self.setStyleSheet("""
-            
-        """)
 
         # Central widget
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
         main_layout = QVBoxLayout(central_widget)
+        main_layout.setSpacing(0)  # 移除布局之间的间距
         
-         # Log display
+        # Log display
         self.log_text = QTextEdit()
         self.log_text.setReadOnly(True)
+        self.log_text.setStyleSheet("""
+            QTextEdit:focus {
+                border: 1px solid #7A7A7A;
+            }
+        """)
+        
         main_layout.addWidget(self.log_text)
+        
+        # 使用自定义的滚动条
+        scrollbar = AnimatedScrollBar()
+        self.log_text.setVerticalScrollBar(scrollbar)
+
+        main_layout.addWidget(self.log_text)
+        
+        # input panel
+        self.input_field = QLineEdit()
+        self.input_field.setPlaceholderText("Input command...")
+        self.input_field.returnPressed.connect(self.handle_submit)
+        self.input_field.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.input_field.setStyleSheet("""
+            QLineEdit {
+                border-top: 0px solid #101010;
+                border-bottom: 1px solid #7A7A7A;
+                border-left: 1px solid #7A7A7A;
+                border-right: 1px solid #7A7A7A;
+                padding: 2px;
+            }
+        """)
+        
+        main_layout.addWidget(self.input_field)
 
         # Stats panel
         stats_widget = QWidget()
         stats_layout = QHBoxLayout(stats_widget)
         self.stats_labels = {
-            'info': QLabel("INFO: 0"),
+            'info' : QLabel("INFO: 0" ),
             'error': QLabel("ERROR: 0"),
             'false': QLabel("FALSE: 0"),
-            'debug': QLabel("DEBUG: 0")
+            'debug': QLabel("DEBUG: 0"),
+            'input': QLabel("INPUT: 0")
         }
         for label in self.stats_labels.values():
-            # label.setStyleSheet("font-weight: bold;")
             stats_layout.addWidget(label)
         
         main_layout.addWidget(stats_widget)
@@ -126,7 +192,7 @@ class LoggerApp(QMainWindow):
         info = {
             "OS Info" : f"{platform.system()} {platform.release()}",
             "Python Version" : platform.python_version(),
-            "CPU" : f"{cpuinfo.get_cpu_info()['brand_raw']} ×{psutil.cpu_count(logical=False)} ",
+            "CPU" : f"{cpuinfo.get_cpu_info()['brand_raw']} × {psutil.cpu_count(logical=False)} ",
             "RAM" : f"{psutil.virtual_memory().total//(1024**3):.2f} GB"
         }
         try:
@@ -155,11 +221,13 @@ class LoggerApp(QMainWindow):
             'error' : '#C03030',
             'false' : '#C00000',
             'debug' : '#C000C0',
+            'input' : '#202020',
             'timestamp' : '#858585',
             'content' : '#000000'
         }
         timestamp = datetime.now().strftime("[%H:%M:%S]")
-        log_label = f"[{log_type.upper()}]&nbsp;" if log_type == "info" else f"[{log_type.upper()}]"
+        # 当类型为 info 时, 在标签后面加一个空格, 当类型为 input 时, 让标签变为 "  >>>  "
+        log_label = f"[{log_type.upper()}]&nbsp;" if log_type == "info" else "&nbsp;&nbsp;>>>&nbsp;&nbsp;" if log_type == "input" else f"[{log_type.upper()}]"
 
         log_html = f"""
             <div style="margin-bottom: 2px;
@@ -179,11 +247,16 @@ class LoggerApp(QMainWindow):
         self.log_text.ensureCursorVisible()
     
     @pyqtSlot(dict)
-    def update_stats(self, counters:dict):
+    def update_stats(self, counters:dict[str,int]):
         for log_type, count in counters.items():
             self.stats_labels[log_type].setText(
                 f"{log_type.upper()}: {count}"
             )
+            
+    def handle_submit(self):
+        cmd = self.input_field.text()
+        self.input(cmd)
+        self.input_field.clear()
     
     def closeEvent(self, event):
         if hasattr(self, 'consumer'):  # 安全检查
@@ -206,3 +279,21 @@ class LoggerApp(QMainWindow):
     def debug(self, *messages):
         for message in messages:
             self.consumer.push_log('debug', message)
+    
+    def input(self, message):
+        self.consumer.push_log('input', message)
+        
+
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    logs = LoggerApp()
+    logs.show()
+    
+    for _ in range(10):
+        logs.info("info message")
+        logs.error("error message")
+        logs.debug("debug message")
+        logs.false("false message")
+        logs.input("input message")
+    
+    sys.exit(app.exec_())
