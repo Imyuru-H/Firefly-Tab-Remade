@@ -1,9 +1,7 @@
-const body = document.body;
-
-(function () {
+window.onload = function __init__() {
+    const body = document.body;
     setInterval(() => {
-        const body_left = body.offsetLeft;
-        body.style.width = window.innerWidth;
-        console.log(window.innerWidth);
+        body.setAttribute('style', 'width: ' + window.innerWidth + 'px;');
+        console.log(window.innerWidth,body.offsetLeft);
     }, 1000 / 60);
-})();
+}
