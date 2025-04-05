@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preload" href="../fonts/genesix.ttf" as="font" type="font/ttf" crossorigin>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <title>Search</title>
-    <ling rel="icon" href="{{ url_for('static', filename='images/favicon.ico') }}?v={{ timestamp }}" type="image/x-icon"></ling>
+    <link rel="icon" href="{{ url_for('static', filename='images/favicon.ico') }}?v={{ timestamp }}" type="image/x-icon"></ling>
 </head>
 <body id="page">
     <!-- background -->
@@ -20,12 +21,25 @@
     <div id="particles"></div>
     <!-- content -->
     <div id="content">
-        <div id="border">
-            <img src="{{ url_for('static', filename='svg/border-LeftTop.svg') }}" id="border_left" alt=""/>
-            <img src="{{ url_for('static', filename='svg/border-LeftTop.svg') }}" id="border_right" alt=""/>
+        <div id="text">
+            <div id="border">
+                <img src="{{ url_for('static', filename='svg/border-LeftTop.svg') }}" id="border_left" alt=""/>
+                <img src="{{ url_for('static', filename='svg/border-LeftTop.svg') }}" id="border_right" alt=""/>
+            </div>
+            <h1>
+                <span id="title">𝓞𝓷𝓬𝓮 𝓽𝓱𝓮 𝓖𝓵𝓪𝓶𝓸𝓽𝓱 𝓚𝓷𝓲𝓰𝓱𝓽, 𝓷𝓸𝔀 𝓽𝓱𝓮 𝓢𝓽𝓮𝓵𝓵𝓪𝓻 𝓗𝓾𝓷𝓽𝓮𝓻.</span>
+            </h1>
+            <div>
+                <p class="ref">
+                    <span class="ref" id="ref">AR-26710 : Firefly</span>
+                </p>
+                <time id="time" datetime="00:00:00">
+                    - <span id="hours">00</span>:<span id="minutes">00</span>:<span id="seconds">00</span> -
+                </time>
+            </div>
         </div>
-        <h1></h1>
     </div>
+    <script src="{{ url_for('static', filename='js/borderPosInit.js') }}"></script>
     <script src="{{ url_for('static', filename='js/parallax.js') }}"></script>
 </body>
 </html>

@@ -1,39 +1,51 @@
+let centerX, centerY;
+let background, content;
+
 function updateCenter() {
-    // 计算当前页面的中心点
-    globalThis.centerX = document.body.offsetWidth / 2;
-    globalThis.centerY = document.body.offsetHeight / 2;
+    centerX = document.body.offsetWidth / 2;
+    centerY = document.body.offsetHeight / 2;
 }
 
 function getMousePos(event) {
-    var e = event || window.event;
-    return { "x": e.screenX, "y": e.screenY };
+    const e = event || window.event;
+    return { x: e.pageX, y: e.pageY };
 }
 
-(function (){
-    updateCenter();
-})();
+// 初始化中心位置
+updateCenter();
 
 window.onload = function __init__() {
-    globalThis.background = document.getElementById("background");
-    globalThis.content = document.getElementById("content");
-    globalThis.particle = document.getElementById("particle");
-    // 初始化并更新页面中心坐标
+    // 获取元素并检查存在性
+    background = document.getElementById("background");
+    content = document.getElementById("content");
+
+    // 调试：检查元素是否存在
+    console.log('Elements:', { background, content });
+
     updateCenter();
-    // 监听窗口大小变化以更新中心坐标
     window.addEventListener('resize', updateCenter);
 };
 
-window.onmousemove = function(event) {
-    // 获取当前鼠标位置（基于文档坐标）
-    const mouseX = event.pageX - document.body.offsetWidth / 2;
+window.onmousemove = function (event) {
+    const mouseX = event.pageX;
     const mouseY = event.pageY;
-    
-    // 计算与中心点的偏移量
     const dx = mouseX - centerX;
     const dy = mouseY - centerY;
-    
-    // 应用视差效果
-    background.style.transform = `translate(${-dx/100}px, ${-dy/100}px)`;
-    particle.style.transform = `translate(${-dx/100}px, ${-dy/100}px)`;
-    content.style.transform = `translate(${dx/50}px, ${dy/50}px)`;
+
+    console.log(dx,dy);
+
+    // 安全操作样式
+    [background, content].forEach(el => {
+        if (!el) {
+            console.warn('元素未找到:', el);
+            return;
+        }
+    });
+
+    if (background) {
+        background.style.transform = `translate(${-dx / 100}px, ${-dy / 100}px)`;
+    }
+    if (content) {
+        content.style.transform = `translate(${dx / 50}px, ${dy / 50}px)`;
+    }
 };

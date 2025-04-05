@@ -50,8 +50,17 @@ werkzeug_logger.setLevel(logging.CRITICAL)  # 设置日志级别
 
 log_queue = queue.Queue(-1) # 无限制队列
 
+# 处理日志
 @app.after_request
 def capture_response_data(response):
+    # 定义状态码与日志级别的映射关系
+    STATUS_LOG_MAP = {
+        2: "info",
+        3: "info",
+        4: "error",
+        5: "false"
+    }
+    
     # 获取请求路径、方法、状态码、响应时间等信息
     data = {
         "method": request.method,
@@ -60,17 +69,18 @@ def capture_response_data(response):
         "client_ip": request.remote_addr,
         "user_agent": str(request.user_agent)
     }
-    log_content = f"- {data['method']} {data['status_code']} - from {data['client_ip']}, calling {data['path']}"
 
-    if data["status_code"]//100 == 2 or data["status_code"]//100 == 3:
-        logs.info(log_content)
-    elif data["status_code"]//100 == 4:
-        logs.error(log_content)
-    elif data["status_code"]//100 == 5:
-        logs.false(log_content)
+    status_category = data.get("status_code", 0) // 100  # 防御性获取状态码
+    log_level = STATUS_LOG_MAP.get(status_category, "warning")
+    
+    # 动态获取日志方法，避免笔误导致的 AttributeError
+    log_method = getattr(logs, log_level, logs.error)
+    log_content = f"- {data['method']} {data['status_code']} - from {data['client_ip']}, calling {data['path']}"
+    log_method(f"Status {data['status_code']}: {log_content}")
     
     return response
 
+# 定义 webapp 路由
 @app.route('/')
 def index():
     kwargs = {
@@ -79,6 +89,15 @@ def index():
     }
 
     return render_template('firefly.html', **kwargs), logs.info("return firefly.html.")
+
+@app.route("/favicon.ico")
+def favicon():
+    return send_from_directory("static", "favicon.ico", mimetype="image/vnd.microsoft.icon")
+
+# 处理 HTTP 错误
+@app.errorhandler(Exception)
+def exception_handler(error):
+    pass
 
 
 if __name__ == "__main__":
@@ -92,7 +111,7 @@ if __name__ == "__main__":
     flask_thread = threading.Thread(target=run_flask_app, daemon=True)
     flask_thread.start()
     logs.info(f" * Serving Flask app '{CONFIGS['app_name']}' on port {CONFIGS['flask_port']}",
-              f" * Debug mode: {'on' if CONFIGS['flask_debug'] else 'off'}",)
+              f" * Debug mode: {'on' if CONFIGS['flask_debug'] else 'off'}")
     
     # 显示日志窗口并启动 Qt 事件循环
     logs.show()

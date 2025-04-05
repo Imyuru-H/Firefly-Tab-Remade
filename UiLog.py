@@ -19,21 +19,29 @@ Update Features:
 import os, sys
 os.environ["PYTHONIOENCODING"] = "utf-8"
 
+import numpy as np
+
 
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget,
                              QVBoxLayout, QHBoxLayout, QLabel, 
-                             QScrollArea, QScrollBar, QScroller,
-                             QTextEdit, QLineEdit, QSizePolicy)
+                             QTextEdit, QLineEdit, QSizePolicy,
+                             QSystemTrayIcon, QMenu)
 from PyQt5.QtGui import QTextCursor
 from PyQt5.QtCore import (QThread, pyqtSignal, pyqtSlot,
                           QMutex, Qt, QEasingCurve,
-                          QEvent, QPropertyAnimation, )
-from PyQt5.QtCore import pyqtProperty
+                          QEvent, QPropertyAnimation, pyqtProperty)
+from PyQt5.QtGui import QIcon, QPixmap
 
 import platform, psutil, cpuinfo, GPUtil
 from prettytable import PrettyTable
 from datetime import datetime
 
+# 检查操作系统类型
+if os.name == 'nt':  # Windows 系统
+    import ctypes
+    ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("myappid")
+else:  # macOS 和 Linux 系统
+    pass
 
 CONFIG = {
     'app_name' : 'LoggerApp',
@@ -80,42 +88,6 @@ class LogConsumer(QThread):
         self.running = False
         self.wait()
 
-class AnimatedScrollBar(QScrollBar):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self._width = 6
-        self.animation = QPropertyAnimation(self, b"width")
-        self.animation.setEasingCurve(QEasingCurve.InOutQuad)
-        self.animation.setDuration(100)
-        self.width = 6
-        
-        self.setStyleSheet("""
-            QScrollBar:vertical {}
-        """)
-
-    def enterEvent(self, event):
-        self.animation.stop()
-        self.animation.setStartValue(self.width)
-        self.animation.setEndValue(12)
-        self.animation.start()
-        return super().enterEvent(event)
-
-    def leaveEvent(self, event):
-        self.animation.stop()
-        self.animation.setStartValue(self.width)
-        self.animation.setEndValue(6)
-        self.animation.start()
-        return super().leaveEvent(event)
-
-    def get_width(self):
-        return self._width
-
-    def set_width(self, width):
-        self._width = width
-        self.setStyleSheet(f"QScrollBar:vertical {{ width: {width}px; }}")
-
-    width = pyqtProperty(int, get_width, set_width)
-
 class LoggerApp(QMainWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -125,7 +97,12 @@ class LoggerApp(QMainWindow):
     
     def _init_ui(self):
         self.setWindowTitle(CONFIG['app_name'])
-        self.setGeometry(100, 100, *CONFIG['window_size'])
+        self.setGeometry(100, 100, *(CONFIG['window_size']))
+        
+        ico_path = os.path.join(os.path.dirname(__file__), 'logAppIcon.png')
+        icon = QIcon()
+        icon.addPixmap(QPixmap(ico_path), QIcon.Normal, QIcon.Off)
+        self.setWindowIcon(icon)
 
         # Central widget
         central_widget = QWidget()
@@ -142,12 +119,6 @@ class LoggerApp(QMainWindow):
             }
         """)
         
-        main_layout.addWidget(self.log_text)
-        
-        # 使用自定义的滚动条
-        scrollbar = AnimatedScrollBar()
-        self.log_text.setVerticalScrollBar(scrollbar)
-
         main_layout.addWidget(self.log_text)
         
         # input panel
