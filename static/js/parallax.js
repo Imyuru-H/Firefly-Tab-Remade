@@ -32,8 +32,6 @@ window.onmousemove = function (event) {
     const dx = mouseX - centerX;
     const dy = mouseY - centerY;
 
-    console.log(dx,dy);
-
     // 安全操作样式
     [background, content].forEach(el => {
         if (!el) {
