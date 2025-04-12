@@ -2,18 +2,18 @@
 # **coding:utf-8**
 
 
-__version__ = '0.3.0'
+__version__ = '0.4.0'
 
 """
 +------------------+------------+
 | Author           | Imyuru_    |
-| Version          | 0.3.0      |
+| Version          | 0.4.0      |
 | Last update time | 2025-3-29  |
 +------------------+------------+
 
 Update Features:
  - rebuild the app with PyQt5 from tkinter.
- - 新增：日志中的IP/URL自动转为超链接
+ - 增加可操控的链接识别并转化为超链接
 """
 
 
