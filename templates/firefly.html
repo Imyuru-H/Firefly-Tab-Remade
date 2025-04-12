@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="preload" href="../fonts/genesix.ttf" as="font" type="font/ttf" crossorigin>
+    <link rel="preload" href="{{ url_for('static', filename="fonts/genesix.ttf") }}" as="font" type="font/ttf" crossorigin>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <title>Search</title>
     <link rel="icon" href="{{ url_for('static', filename='images/favicon.ico') }}?v={{ timestamp }}" type="image/x-icon"></ling>
@@ -39,8 +39,8 @@
             </div>
         </div>
     </div>
-    <script src="{{ url_for('static', filename='js/borderPosInit.js') }}"></script>
+    <div id="tip"> {{ tip }} </div>
     <script src="{{ url_for('static', filename='js/parallax.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/borderPosInit.js') }}"></script>
 </body>
-<script src="{{ url_for('static', filename='js/init.js') }}"></script>
 </html>

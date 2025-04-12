@@ -34,6 +34,7 @@ body {
     height: 100%; /* 将视频放在最底层 */
     overflow: visible; /* 允许视频溢出 */
     background-attachment: fixed; /* 背景固定 */
+    transition: transform 0.1s ease-out; /* 视差效果更平滑 */
 }
 
 #bg {
@@ -72,7 +73,6 @@ body {
     max-width: 90%;         /* 防止内容过宽 */
     margin: 0 auto;         /* Flexbox 下可能不必要，但保留作为兜底 */
     padding: 20px;
-    border: 1px solid red;  /* 调试：临时添加边框观察元素边界 */
 }
 
 @media screen and (min-width: 1280px) {

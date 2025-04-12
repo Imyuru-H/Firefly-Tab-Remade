@@ -6,17 +6,23 @@ __version__ = '0.3.0'
 
 """
 +------------------+------------+
-| Author           : Imyuru_    |
-| Version          : 0.3.0      |
-| Last update time : 2025-3-29  |
+| Author           | Imyuru_    |
+| Version          | 0.3.0      |
+| Last update time | 2025-3-29  |
 +------------------+------------+
 
 Update Features:
  - rebuild the app with PyQt5 from tkinter.
+ - 新增：日志中的IP/URL自动转为超链接
 """
 
 
-import os, sys
+import os
+import sys
+import re
+from html import escape
+from urllib.parse import urlparse
+
 os.environ["PYTHONIOENCODING"] = "utf-8"
 
 import numpy as np
@@ -24,7 +30,7 @@ import numpy as np
 
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget,
                              QVBoxLayout, QHBoxLayout, QLabel, 
-                             QTextEdit, QLineEdit, QSizePolicy,
+                             QTextBrowser, QLineEdit, QSizePolicy,
                              QSystemTrayIcon, QMenu)
 from PyQt5.QtGui import QTextCursor
 from PyQt5.QtCore import (QThread, pyqtSignal, pyqtSlot,
@@ -32,7 +38,10 @@ from PyQt5.QtCore import (QThread, pyqtSignal, pyqtSlot,
                           QEvent, QPropertyAnimation, pyqtProperty)
 from PyQt5.QtGui import QIcon, QPixmap
 
-import platform, psutil, cpuinfo, GPUtil
+import platform
+import psutil
+import cpuinfo
+import GPUtil
 from prettytable import PrettyTable
 from datetime import datetime
 
@@ -52,7 +61,7 @@ CONFIG = {
 
 
 class LogConsumer(QThread):
-    log_received = pyqtSignal(str, str)  # (log_type, message)
+    log_received = pyqtSignal(str, str, bool)  # (log_type, message, if_linkify)
     stats_updated = pyqtSignal(dict)     # counters dict
 
     def __init__(self):
@@ -68,18 +77,18 @@ class LogConsumer(QThread):
             'input': 0            
         }
     
-    def push_log(self, log_type, message):
+    def push_log(self, log_type, message, if_linkify):
         self.mutex.lock()
-        self.log_queue.append((log_type, message))
+        self.log_queue.append((log_type, message, if_linkify))
         self.mutex.unlock()
 
     def run(self):
         while self.running:
             self.mutex.lock()
             if self.log_queue:
-                log_type, message = self.log_queue.pop(0)
+                log_type, message, if_linkify = self.log_queue.pop(0)
                 self.counters[log_type] += 1
-                self.log_received.emit(log_type, message)
+                self.log_received.emit(log_type, message, if_linkify)
                 self.stats_updated.emit(self.counters.copy())
             self.mutex.unlock()
             self.msleep(1)
@@ -87,6 +96,7 @@ class LogConsumer(QThread):
     def stop(self):
         self.running = False
         self.wait()
+
 
 class LoggerApp(QMainWindow):
     def __init__(self, parent=None):
@@ -108,15 +118,18 @@ class LoggerApp(QMainWindow):
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
         main_layout = QVBoxLayout(central_widget)
-        main_layout.setSpacing(0)  # 移除布局之间的间距
+        main_layout.setSpacing(0)
         
         # Log display
-        self.log_text = QTextEdit()
+        self.log_text = QTextBrowser()
         self.log_text.setReadOnly(True)
+        self.log_text.setOpenExternalLinks(True)  # 启用超链接
         self.log_text.setStyleSheet("""
-            QTextEdit:focus {
+            QTextBrowser:focus {
                 border: 1px solid #7A7A7A;
             }
+            a { color: #00BFFF; text-decoration: none; }
+            a:hover { text-decoration: underline; }
         """)
         
         main_layout.addWidget(self.log_text)
@@ -180,13 +193,40 @@ class LoggerApp(QMainWindow):
 
         table = str(table).split("\n")
 
+        # 替换空格为不可见特殊占位字符
+        special_char = "\u200B"  # 零宽空格字符
         for i in range(len(table)):
-            table[i] = table[i].replace(" ","&nbsp;")
+            table[i] = table[i].replace(" ", special_char + " ")
 
         return table
-    
-    @pyqtSlot(str, str)
-    def append_log(self, log_type:str, message:str):
+
+    def _linkify_text(self, text: str) -> str:
+        """将文本中的 IP 和 URL 转换为超链接"""
+        # 预编译正则表达式
+        ip_pattern = re.compile(r'\b(?:\d{1,3}\.){3}\d{1,3}(?::\d+)?\b')  # 支持带端口如 192.168.1.1:8080
+        url_pattern = re.compile(
+            r'(?:https?|ftp)://[^\s,]+|'  # 匹配有协议的 URL
+            r'\b(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(?::\d+)?(?:/[^\s,]+)?\b'  # 匹配纯域名如 google.com:8080/path
+        )
+
+        def replace_url(match):
+            url = match.group(0)
+            parsed = urlparse(url)
+            if not parsed.scheme:  # 自动补全协议头
+                url = f'http://{url}'
+            return f'<a href="{url}">{escape(match.group(0))}</a>'
+
+        def replace_ip(match):
+            ip = match.group(0)
+            return f'<a href="http://{ip}">{escape(ip)}</a>'
+
+        # 先处理 URL，再处理 IP（避免重复替换）
+        text = url_pattern.sub(replace_url, text)
+        text = ip_pattern.sub(replace_ip, text)
+        return text
+
+    @pyqtSlot(str, str, bool)
+    def append_log(self, log_type: str, message: str, if_linkify:bool):
         color_map = {
             'info' : '#C0C000',
             'error' : '#C03030',
@@ -197,8 +237,10 @@ class LoggerApp(QMainWindow):
             'content' : '#000000'
         }
         timestamp = datetime.now().strftime("[%H:%M:%S]")
-        # 当类型为 info 时, 在标签后面加一个空格, 当类型为 input 时, 让标签变为 "  >>>  "
         log_label = f"[{log_type.upper()}]&nbsp;" if log_type == "info" else "&nbsp;&nbsp;>>>&nbsp;&nbsp;" if log_type == "input" else f"[{log_type.upper()}]"
+
+        # 处理消息中的链接
+        processed_msg = self._linkify_text(escape(message)) if if_linkify else message
 
         log_html = f"""
             <div style="margin-bottom: 2px;
@@ -209,7 +251,7 @@ class LoggerApp(QMainWindow):
                         padding: 1px 0;">
                 <span style="color: {color_map['timestamp']}">{timestamp}</span>
                 <span style="color: {color_map[log_type]}">{log_label}</span>
-                <span style="color: {color_map['content']}">{message}</span>
+                <span style="color: {color_map['content']}">{processed_msg}</span>
             </div>
         """
         self.log_text.moveCursor(QTextCursor.End)
@@ -218,7 +260,7 @@ class LoggerApp(QMainWindow):
         self.log_text.ensureCursorVisible()
     
     @pyqtSlot(dict)
-    def update_stats(self, counters:dict[str,int]):
+    def update_stats(self, counters: dict):
         for log_type, count in counters.items():
             self.stats_labels[log_type].setText(
                 f"{log_type.upper()}: {count}"
@@ -230,41 +272,40 @@ class LoggerApp(QMainWindow):
         self.input_field.clear()
     
     def closeEvent(self, event):
-        if hasattr(self, 'consumer'):  # 安全检查
+        if hasattr(self, 'consumer'):
             self.consumer.stop()
         return super().closeEvent(event)
     
     # Public API methods
-    def info(self, *messages):
+    def info(self, *messages, if_linkify=True):
         for message in messages:
-            self.consumer.push_log('info', message)
+            self.consumer.push_log('info', str(message), if_linkify)
     
-    def error(self, *messages):
+    def error(self, *messages, if_linkify=True):
         for message in messages:
-            self.consumer.push_log('error', message)
+            self.consumer.push_log('error', str(message), if_linkify)
 
-    def false(self, *messages):
+    def false(self, *messages, if_linkify=True):
         for message in messages:
-            self.consumer.push_log('false', message)
+            self.consumer.push_log('false', str(message), if_linkify)
 
-    def debug(self, *messages):
+    def debug(self, *messages, if_linkify=True):
         for message in messages:
-            self.consumer.push_log('debug', message)
+            self.consumer.push_log('debug', str(message), if_linkify)
     
-    def input(self, message):
-        self.consumer.push_log('input', message)
-        
+    def input(self, message, if_linkify=True):
+        self.consumer.push_log('input', str(message), if_linkify)
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     logs = LoggerApp()
     logs.show()
     
-    for _ in range(10):
-        logs.info("info message")
-        logs.error("error message")
-        logs.debug("debug message")
-        logs.false("false message")
-        logs.input("input message")
+    # 测试包含链接的日志
+    logs.info("https://example.com 或 IP 192.168.1.1:8080")
+    logs.error("ftp://ftp.test.org/file.txt")
+    logs.debug("127.0.0.1")
+    logs.input("curl http://api.demo.com/v1/data")
     
     sys.exit(app.exec_())

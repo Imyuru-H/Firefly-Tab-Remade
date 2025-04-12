@@ -71,12 +71,12 @@ def capture_response_data(response):
     }
 
     status_category = data.get("status_code", 0) // 100  # 防御性获取状态码
-    log_level = STATUS_LOG_MAP.get(status_category, "warning")
+    log_level = STATUS_LOG_MAP.get(status_category, "error")
     
     # 动态获取日志方法，避免笔误导致的 AttributeError
     log_method = getattr(logs, log_level, logs.error)
     log_content = f"- {data['method']} {data['status_code']} - from {data['client_ip']}, calling {data['path']}"
-    log_method(f"Status {data['status_code']}: {log_content}")
+    log_method(f"Status {data['status_code']}: {log_content}", if_linkify=False)
     
     return response
 
@@ -84,11 +84,11 @@ def capture_response_data(response):
 @app.route('/')
 def index():
     kwargs = {
-        "tip" : random.choice(tips.tips),
+        "searching_tip" : random.choice(tips.tips),
         "background" : f"/static/background/{CONFIGS['bg_path']}"
     }
 
-    return render_template('firefly.html', **kwargs), logs.info("return firefly.html.")
+    return render_template('firefly.html', **kwargs), logs.info("return firefly.html.", if_linkify=False)
 
 @app.route("/favicon.ico")
 def favicon():
@@ -110,7 +110,7 @@ if __name__ == "__main__":
     # 启动 Flask 应用的后台线程
     flask_thread = threading.Thread(target=run_flask_app, daemon=True)
     flask_thread.start()
-    logs.info(f" * Serving Flask app '{CONFIGS['app_name']}' on port {CONFIGS['flask_port']}",
+    logs.info(f" * Serving Flask app '{CONFIGS['app_name']}' on 127.0.0.1:{CONFIGS['flask_port']}",
               f" * Debug mode: {'on' if CONFIGS['flask_debug'] else 'off'}")
     
     # 显示日志窗口并启动 Qt 事件循环
