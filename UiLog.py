@@ -128,8 +128,9 @@ class LoggerApp(QMainWindow):
             QTextBrowser:focus {
                 border: 1px solid #7A7A7A;
             }
-            a { color: #00BFFF; text-decoration: none; }
+            a { color: #000000; text-decoration: none; }
             a:hover { text-decoration: underline; }
+            a:visited { border: none }
         """)
         
         main_layout.addWidget(self.log_text)
