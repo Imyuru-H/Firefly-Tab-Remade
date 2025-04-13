@@ -14,7 +14,7 @@ function getMousePos(event) {
 // 初始化中心位置
 updateCenter();
 
-window.onload = function __init__() {
+function initParallax() {
     // 获取元素并检查存在性
     background = document.getElementById("background");
     content = document.getElementById("content");
@@ -24,7 +24,9 @@ window.onload = function __init__() {
 
     updateCenter();
     window.addEventListener('resize', updateCenter);
-};
+}
+
+window.addEventListener('load', initParallax);
 
 window.onmousemove = function (event) {
     const mouseX = event.pageX;
