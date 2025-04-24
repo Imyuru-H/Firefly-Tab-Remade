@@ -97,7 +97,8 @@ def favicon():
 # 处理 HTTP 错误
 @app.errorhandler(Exception)
 def exception_handler(error):
-    pass
+    print(error)
+    print(type(error))
 
 
 if __name__ == "__main__":
